@@ -6,13 +6,13 @@ use log::info;
 use tokio::{net::lookup_host, time::sleep};
 
 use snap_coin::{
-    api::api_server::{self},
     build_block,
     crypto::{Hash, randomx_optimized_mode},
     economics::DEV_WALLET,
     full_node::{
-        accept_block, auto_peer::start_auto_peer, auto_reconnect::start_auto_reconnect,
-        connect_peer, create_full_node, ibd::ibd_blockchain, p2p_server::start_p2p_server,
+        accept_block, api_server::FullNodeApiServer, auto_peer::start_auto_peer,
+        auto_reconnect::start_auto_reconnect, connect_peer, create_full_node, ibd::ibd_blockchain,
+        p2p_server::start_p2p_server,
     },
 };
 
@@ -163,7 +163,7 @@ async fn main() -> Result<(), anyhow::Error> {
     if start_api {
         sleep(Duration::from_secs(1)).await;
         let api_server =
-            api_server::Server::new(args.api_port as u32, blockchain.clone(), node_state.clone());
+            FullNodeApiServer::new(args.api_port as u32, blockchain.clone(), node_state.clone());
         api_server.listen().await?;
     }
 
