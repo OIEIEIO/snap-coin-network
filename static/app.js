@@ -5,7 +5,7 @@
 
 'use strict';
 
-const WS_URL      = `ws://${location.host}/ws`;
+const WS_URL      = `wss://${location.host}/ws`;
 const API_SUMMARY = '/api/summary';
 const API_PEERS   = '/api/peers';
 
