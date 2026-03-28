@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<!-- File: static/index.html -->
+<!-- Project: snap-coin-network / static/ -->
+<!-- Version: 0.1.3 -->
+<!-- Description: Snap Coin Network dashboard — world map, peer table, live event feed -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Snap Coin Network</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="topbar-left">
+      <span class="logo">SNAP</span>
+      <span class="logo-sub">Network Intelligence</span>
+    </div>
+    <div class="topbar-stats">
+      <div class="stat-pill">
+        <span class="stat-label">PEERS</span>
+        <span class="stat-value" id="stat-peers">—</span>
+      </div>
+      <div class="stat-pill">
+        <span class="stat-label">CONNECTIONS</span>
+        <span class="stat-value" id="stat-connections">—</span>
+      </div>
+      <div class="stat-pill">
+        <span class="stat-label">BLOCKS</span>
+        <span class="stat-value" id="stat-blocks">—</span>
+      </div>
+      <div class="stat-pill">
+        <span class="stat-label">TXS</span>
+        <span class="stat-value" id="stat-txs">—</span>
+      </div>
+      <div class="stat-pill">
+        <span class="stat-label">UPTIME</span>
+        <span class="stat-value" id="stat-uptime">—</span>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <span class="ws-dot" id="ws-dot"></span>
+      <span class="ws-label" id="ws-label">connecting</span>
+    </div>
+  </header>
+
+  <main class="layout">
+
+    <section class="map-panel">
+      <div class="panel-title">
+        LIVE NETWORK MAP
+        <span class="map-hint">scroll to zoom · drag to pan · double-click to reset</span>
+      </div>
+      <div class="map-wrap">
+        <svg id="world-map" viewBox="0 0 1010 665" xmlns="http://www.w3.org/2000/svg">
+          <g id="map-root">
+            <g id="countries"></g>
+            <g id="laser-lines"></g>
+            <circle id="self-dot" r="5" fill="#00ffc8" opacity="0.9"/>
+          </g>
+        </svg>
+      </div>
+    </section>
+
+    <section class="side-panel">
+
+      <div class="panel peers-panel">
+        <div class="panel-title">
+          ACTIVE PEERS
+          <span class="panel-count" id="peer-count">0</span>
+        </div>
+        <div class="peer-table-wrap">
+          <table class="peer-table">
+            <thead>
+              <tr>
+                <th>ADDRESS</th>
+                <th>DIR</th>
+                <th>LOCATION</th>
+                <th>CONNECTED</th>
+              </tr>
+            </thead>
+            <tbody id="peer-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel events-panel">
+        <div class="panel-title">LIVE EVENTS</div>
+        <div class="event-feed" id="event-feed"></div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
+<!-- File: static/index.html / snap-coin-network / 2026-03-27 -->

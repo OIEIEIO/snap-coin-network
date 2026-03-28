@@ -1,0 +1,305 @@
+/* File: static/style.css */
+/* Project: snap-coin-network / static/ */
+/* Version: 0.1.3 */
+/* Description: Dark teal dashboard theme */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #0a0e12;
+  --bg2:       #111820;
+  --bg3:       #1a2430;
+  --border:    #1e3040;
+  --teal:      #00c8a0;
+  --teal-dim:  #007a60;
+  --cyan:      #00ffc8;
+  --text:      #c8d8e0;
+  --dim:       #4a6070;
+  --yellow:    #d4900a;
+  --red:       #c04040;
+  --green:     #40a060;
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'JetBrains Mono', 'Fira Mono', monospace;
+  font-size: 12px;
+  overflow: hidden;
+}
+
+/* ── Topbar ── */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 48px;
+  padding: 0 20px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.logo {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  color: var(--cyan);
+}
+
+.logo-sub {
+  margin-left: 12px;
+  font-size: 10px;
+  color: var(--dim);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.topbar-stats {
+  display: flex;
+  gap: 8px;
+}
+
+.stat-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4px 14px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  min-width: 80px;
+}
+
+.stat-label {
+  font-size: 9px;
+  color: var(--dim);
+  letter-spacing: 1px;
+}
+
+.stat-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--cyan);
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--dim);
+}
+
+.ws-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--dim);
+  transition: background 0.3s;
+}
+
+.ws-dot.connected    { background: var(--teal); box-shadow: 0 0 6px var(--teal); }
+.ws-dot.disconnected { background: var(--red); }
+
+/* ── Layout ── */
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  height: calc(100vh - 48px);
+  overflow: hidden;
+}
+
+/* ── Map panel ── */
+.map-panel {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--border);
+  padding: 12px;
+  overflow: hidden;
+}
+
+.map-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+#world-map {
+  width: 100%;
+  height: 100%;
+}
+
+#countries path {
+  fill: var(--bg3);
+  stroke: var(--border);
+  stroke-width: 0.4;
+}
+
+/* ── Self dot ── */
+#self-dot {
+  filter: drop-shadow(0 0 4px var(--cyan));
+}
+
+/* ── Peer dots ── */
+.peer-dot {
+  cursor: pointer;
+  transition: r 0.2s;
+}
+
+.peer-dot:hover { r: 7; }
+
+/* ── Laser lines ── */
+.laser {
+  stroke-width: 0.8;
+  fill: none;
+  opacity: 0.25;
+}
+
+.laser.inbound  { stroke: var(--teal); }
+.laser.outbound { stroke: var(--yellow); }
+
+.laser.pulse {
+  stroke-width: 2;
+  stroke-dasharray: 8 4;
+  opacity: 1;
+  animation: dash 0.6s linear infinite, fade 0.8s ease-out forwards;
+}
+
+.laser.block-pulse { stroke: var(--cyan); }
+.laser.tx-pulse    { stroke: var(--yellow); }
+
+@keyframes dash {
+  to { stroke-dashoffset: -24; }
+}
+
+@keyframes fade {
+  0%   { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* ── Side panel ── */
+.side-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.peers-panel  { flex: 1; }
+.events-panel { height: 220px; flex-shrink: 0; }
+
+.panel-title {
+  padding: 8px 12px;
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--dim);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.map-hint {
+  margin-left: auto;
+  font-size: 9px;
+  color: var(--dim);
+  letter-spacing: 0.5px;
+  font-style: italic;
+}
+
+.panel-count {
+  background: var(--teal-dim);
+  color: var(--cyan);
+  border-radius: 10px;
+  padding: 1px 7px;
+  font-size: 10px;
+}
+
+/* ── Peer table ── */
+.peer-table-wrap {
+  overflow-y: auto;
+  flex: 1;
+}
+
+.peer-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.peer-table th {
+  padding: 6px 10px;
+  text-align: left;
+  font-size: 9px;
+  letter-spacing: 1px;
+  color: var(--dim);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+  position: sticky;
+  top: 0;
+}
+
+.peer-table td {
+  padding: 5px 10px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  font-size: 11px;
+}
+
+.peer-table tr:hover td        { background: var(--bg3); }
+.peer-table tr.self-row td     { color: var(--cyan); }
+
+.dir-badge {
+  font-size: 9px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  letter-spacing: 1px;
+}
+
+.dir-badge.in   { background: rgba(0,200,160,0.15); color: var(--teal); }
+.dir-badge.out  { background: rgba(212,144,10,0.15); color: var(--yellow); }
+.dir-badge.self { background: rgba(0,255,200,0.15);  color: var(--cyan); }
+
+/* ── Event feed ── */
+.event-feed {
+  overflow-y: auto;
+  flex: 1;
+  padding: 6px 0;
+}
+
+.event-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  border-bottom: 1px solid rgba(30,48,64,0.5);
+  font-size: 10px;
+  animation: slide-in 0.2s ease-out;
+}
+
+@keyframes slide-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.event-icon { font-size: 12px; flex-shrink: 0; }
+.event-text { color: var(--text); flex: 1; }
+.event-time { color: var(--dim); font-size: 9px; flex-shrink: 0; }
+
+/* ── Scrollbars ── */
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* File: static/style.css / snap-coin-network / 2026-03-27 */
