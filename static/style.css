@@ -1,8 +1,9 @@
 /* =============================================================================
    File: static/style.css
    Project: snap-coin-network / static/
-   Version: 0.2.0
+   Version: 0.2.1
    Description: Dark teal dashboard theme. Updated for Leaflet map.
+                Mobile: stats bar wraps to second row instead of hiding.
    Modified: 2026-03-28
    ============================================================================= */
 
@@ -37,11 +38,13 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 48px;
+  flex-wrap: wrap;
+  min-height: 48px;
   padding: 0 20px;
   background: var(--bg2);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
+  gap: 8px;
 }
 
 .logo {
@@ -62,6 +65,7 @@ html, body {
 .topbar-stats {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .stat-pill {
@@ -310,17 +314,68 @@ html, body {
 
 /* ── Mobile ── */
 @media (max-width: 768px) {
-  .layout {
-    grid-template-columns: 1fr;
-    grid-template-rows: 50vh 1fr;
+  html, body {
+    overflow: auto;
   }
+
+  .topbar {
+    height: auto;
+    padding: 8px 12px;
+  }
+
+  .topbar-left {
+    width: 100%;
+    display: flex;
+    align-items: center;
+  }
+
+  .topbar-stats {
+    width: 100%;
+    justify-content: flex-start;
+    padding: 4px 0;
+  }
+
+  .stat-pill {
+    flex: 1;
+    min-width: 60px;
+    padding: 4px 8px;
+  }
+
+  .stat-value {
+    font-size: 12px;
+  }
+
+  .topbar-right {
+    width: 100%;
+    justify-content: flex-end;
+    padding-bottom: 4px;
+  }
+
+  .layout {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    overflow: visible;
+  }
+
   .map-panel {
     border-right: none;
     border-bottom: 1px solid var(--border);
     padding: 8px;
+    height: 50vh;
   }
-  .topbar-stats {
-    display: none;
+
+  .side-panel {
+    height: auto;
+    overflow: visible;
+  }
+
+  .peers-panel {
+    height: 300px;
+  }
+
+  .events-panel {
+    height: 200px;
   }
 }
 
