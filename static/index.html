@@ -1,14 +1,15 @@
 <!DOCTYPE html>
 <!-- File: static/index.html -->
 <!-- Project: snap-coin-network / static/ -->
-<!-- Version: 0.1.3 -->
-<!-- Description: Snap Coin Network dashboard — world map, peer table, live event feed -->
+<!-- Version: 0.2.0 -->
+<!-- Description: Snap Coin Network dashboard — Leaflet map, peer table, live event feed -->
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Snap Coin Network</title>
   <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
 
@@ -53,13 +54,7 @@
         <span class="map-hint">scroll to zoom · drag to pan · double-click to reset</span>
       </div>
       <div class="map-wrap">
-        <svg id="world-map" viewBox="0 0 1010 665" xmlns="http://www.w3.org/2000/svg">
-          <g id="map-root">
-            <g id="countries"></g>
-            <g id="laser-lines"></g>
-            <circle id="self-dot" r="5" fill="#00ffc8" opacity="0.9"/>
-          </g>
-        </svg>
+        <div id="world-map"></div>
       </div>
     </section>
 
@@ -94,7 +89,8 @@
 
   </main>
 
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
-<!-- File: static/index.html / snap-coin-network / 2026-03-27 -->
+<!-- File: static/index.html / snap-coin-network / 2026-03-28 -->

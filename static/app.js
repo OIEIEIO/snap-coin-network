@@ -1,7 +1,12 @@
+// =============================================================================
 // File: static/app.js
 // Project: snap-coin-network / static/
-// Version: 0.1.3
-// Description: WebSocket client, world map rendering, peer dots, laser lines, zoom/pan
+// Version: 0.2.0
+// Description: Leaflet map, WebSocket client, peer markers, laser lines,
+//              peer table, live event feed. Replaces SVG map with Leaflet
+//              for cross-browser/mobile compatibility.
+// Modified: 2026-03-28
+// =============================================================================
 
 'use strict';
 
@@ -9,186 +14,100 @@ const WS_URL      = `wss://${location.host}/ws`;
 const API_SUMMARY = '/api/summary';
 const API_PEERS   = '/api/peers';
 
-let SELF     = { lat: 20, lon: 0 };
-let peers    = {};
-let ws       = null;
-let mapReady = false;
+let SELF  = { lat: 20, lon: 0 };
+let peers = {};
+let ws    = null;
 
-const MAP_W = 1010;
-const MAP_H = 665;
+// ── Leaflet map setup ─────────────────────────────────────────────────────────
+const map = L.map('world-map', {
+  center: [20, 0],
+  zoom: 2,
+  minZoom: 1,
+  maxZoom: 10,
+  zoomControl: true,
+  attributionControl: false,
+  worldCopyJump: false,
+});
 
-// ── Zoom/Pan state ────────────────────────────────────────────────────────────
-let viewX    = 0;
-let viewY    = 0;
-let viewZoom = 1;
-let isPanning = false;
-let panStart  = { x: 0, y: 0 };
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
+  subdomains: 'abcd',
+  maxZoom: 19,
+}).addTo(map);
 
-function project(lat, lon) {
-  const x = (lon + 180) * (MAP_W / 360);
-  const y = (90 - lat)  * (MAP_H / 180);
-  return { x, y };
-}
+// ── Marker + line layers ──────────────────────────────────────────────────────
+const linesLayer   = L.layerGroup().addTo(map);
+const markersLayer = L.layerGroup().addTo(map);
+const pulseLayer   = L.layerGroup().addTo(map);
 
-function applyTransform() {
-  const g = document.getElementById('map-root');
-  if (g) g.setAttribute('transform', `translate(${viewX},${viewY}) scale(${viewZoom})`);
-}
+// Self marker
+const selfIcon = L.divIcon({
+  className: '',
+  html: '<div class="self-marker"></div>',
+  iconSize: [12, 12],
+  iconAnchor: [6, 6],
+});
+let selfMarker = L.marker([SELF.lat, SELF.lon], { icon: selfIcon }).addTo(map);
 
-function initZoomPan() {
-  const svg = document.getElementById('world-map');
-
-  svg.addEventListener('wheel', (e) => {
-    e.preventDefault();
-    const rect    = svg.getBoundingClientRect();
-    const mouseX  = e.clientX - rect.left;
-    const mouseY  = e.clientY - rect.top;
-    const svgX    = (mouseX / rect.width)  * MAP_W;
-    const svgY    = (mouseY / rect.height) * MAP_H;
-
-    const delta   = e.deltaY > 0 ? 0.85 : 1.18;
-    const newZoom = Math.min(Math.max(viewZoom * delta, 0.8), 12);
-
-    viewX = svgX - (svgX - viewX) * (newZoom / viewZoom);
-    viewY = svgY - (svgY - viewY) * (newZoom / viewZoom);
-    viewZoom = newZoom;
-    applyTransform();
-  }, { passive: false });
-
-  svg.addEventListener('mousedown', (e) => {
-    isPanning = true;
-    panStart  = { x: e.clientX - viewX, y: e.clientY - viewY };
-    svg.style.cursor = 'grabbing';
-  });
-
-  window.addEventListener('mousemove', (e) => {
-    if (!isPanning) return;
-    viewX = e.clientX - panStart.x;
-    viewY = e.clientY - panStart.y;
-    applyTransform();
-  });
-
-  window.addEventListener('mouseup', () => {
-    isPanning = false;
-    svg.style.cursor = 'grab';
-  });
-
-  svg.style.cursor = 'grab';
-
-  // Double-click to reset
-  svg.addEventListener('dblclick', () => {
-    viewX    = 0;
-    viewY    = 0;
-    viewZoom = 1;
-    applyTransform();
+// ── Peer dot icon factory ─────────────────────────────────────────────────────
+function peerIcon(inbound) {
+  const color = inbound ? '#00c8a0' : '#d4900a';
+  return L.divIcon({
+    className: '',
+    html: `<div class="peer-marker" style="background:${color};box-shadow:0 0 5px ${color}"></div>`,
+    iconSize: [10, 10],
+    iconAnchor: [5, 5],
   });
 }
 
-async function loadMap() {
-  const svg        = document.getElementById('world-map');
-  const countriesG = document.getElementById('countries');
-
-  try {
-    const res  = await fetch('/world.geojson');
-    const data = await res.json();
-    data.features.forEach(feature => {
-      const geom = feature.geometry;
-      if (!geom) return;
-      const polys = geom.type === 'Polygon'
-        ? [geom.coordinates]
-        : geom.type === 'MultiPolygon'
-          ? geom.coordinates
-          : [];
-      polys.forEach(poly => {
-        poly.forEach(ring => {
-          const d = ring.map(([lon, lat], i) => {
-            const { x, y } = project(lat, lon);
-            return `${i === 0 ? 'M' : 'L'}${x.toFixed(2)},${y.toFixed(2)}`;
-          }).join(' ') + ' Z';
-          const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-          path.setAttribute('d', d);
-          countriesG.appendChild(path);
-        });
-      });
-    });
-  } catch (e) {
-    console.warn('World map not loaded:', e);
-  }
-
-  initZoomPan();
-  mapReady = true;
-  redrawPeers();
-}
-
+// ── Redraw all peer markers and lines ─────────────────────────────────────────
 function redrawPeers() {
-  if (!mapReady) return;
+  linesLayer.clearLayers();
+  markersLayer.clearLayers();
 
-  document.querySelectorAll('.peer-dot').forEach(el => el.remove());
-  document.querySelectorAll('.laser').forEach(el => el.remove());
-
-  const svg     = document.getElementById('world-map');
-  const lasersG = document.getElementById('laser-lines');
-  const selfPos = project(SELF.lat, SELF.lon);
-
-  const selfDot = document.getElementById('self-dot');
-  selfDot.setAttribute('cx', selfPos.x);
-  selfDot.setAttribute('cy', selfPos.y);
+  const selfLatLng = [SELF.lat, SELF.lon];
 
   Object.values(peers).forEach(peer => {
     if (peer.lat == null || peer.lon == null) return;
 
-    // Small jitter to separate overlapping dots
-    const jitter = 2;
-    const jx     = (Math.random() - 0.5) * jitter;
-    const jy     = (Math.random() - 0.5) * jitter;
-    const pos    = project(peer.lat, peer.lon);
-    const px     = pos.x + jx;
-    const py     = pos.y + jy;
+    const peerLatLng = [peer.lat, peer.lon];
 
-    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    line.setAttribute('x1', selfPos.x);
-    line.setAttribute('y1', selfPos.y);
-    line.setAttribute('x2', px);
-    line.setAttribute('y2', py);
-    line.classList.add('laser', peer.inbound ? 'inbound' : 'outbound');
-    line.dataset.addr = peer.addr;
-    lasersG.appendChild(line);
+    // Line from self to peer
+    L.polyline([selfLatLng, peerLatLng], {
+      color:   peer.inbound ? '#00c8a0' : '#d4900a',
+      weight:  1,
+      opacity: 0.25,
+    }).addTo(linesLayer);
 
-    const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    dot.setAttribute('cx', px);
-    dot.setAttribute('cy', py);
-    dot.setAttribute('r', 4);
-    dot.setAttribute('fill', peer.inbound ? '#00c8a0' : '#d4900a');
-    dot.setAttribute('opacity', '0.85');
-    dot.classList.add('peer-dot');
-    dot.dataset.addr = peer.addr;
-
-    const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
-    title.textContent = `${peer.addr}\n${peer.city || ''}${peer.city ? ', ' : ''}${peer.country || 'Unknown'}`;
-    dot.appendChild(title);
-    svg.appendChild(dot);
+    // Peer dot
+    const marker = L.marker(peerLatLng, { icon: peerIcon(peer.inbound) });
+    const location = [peer.city, peer.country].filter(Boolean).join(', ') || 'Unknown';
+    marker.bindTooltip(`${peer.addr}<br>${location}`, {
+      className: 'peer-tooltip',
+      direction: 'top',
+      offset: [0, -6],
+    });
+    marker.addTo(markersLayer);
   });
 }
 
+// ── Pulse animation on block/tx ───────────────────────────────────────────────
 function pulseLasers(type) {
-  const lasersG  = document.getElementById('laser-lines');
-  const selfPos  = project(SELF.lat, SELF.lon);
-  const cssClass = type === 'block_seen' ? 'block-pulse' : 'tx-pulse';
+  const color    = type === 'block_seen' ? '#00ffc8' : '#d4900a';
+  const selfLatLng = [SELF.lat, SELF.lon];
 
   Object.values(peers).forEach(peer => {
     if (peer.lat == null || peer.lon == null) return;
-    const pos  = project(peer.lat, peer.lon);
-    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    line.setAttribute('x1', selfPos.x);
-    line.setAttribute('y1', selfPos.y);
-    line.setAttribute('x2', pos.x);
-    line.setAttribute('y2', pos.y);
-    line.classList.add('laser', 'pulse', cssClass);
-    lasersG.appendChild(line);
-    setTimeout(() => line.remove(), 700);
+    const line = L.polyline([[peer.lat, peer.lon], selfLatLng], {
+      color,
+      weight:  2,
+      opacity: 0.9,
+      dashArray: '8 4',
+    }).addTo(pulseLayer);
+    setTimeout(() => pulseLayer.removeLayer(line), 700);
   });
 }
 
+// ── Peer table ────────────────────────────────────────────────────────────────
 function renderPeerTable() {
   const tbody = document.getElementById('peer-tbody');
   const count = document.getElementById('peer-count');
@@ -210,6 +129,7 @@ function renderPeerTable() {
   }).join('');
 }
 
+// ── Event feed ────────────────────────────────────────────────────────────────
 function pushEvent(icon, text) {
   const feed = document.getElementById('event-feed');
   const row  = document.createElement('div');
@@ -223,6 +143,7 @@ function pushEvent(icon, text) {
   while (feed.children.length > 80) feed.lastChild.remove();
 }
 
+// ── WebSocket ─────────────────────────────────────────────────────────────────
 function connect() {
   ws = new WebSocket(WS_URL);
   ws.onopen = () => {
@@ -281,6 +202,7 @@ function handleEvent(event) {
   }
 }
 
+// ── API fetches ───────────────────────────────────────────────────────────────
 async function fetchSummary() {
   try {
     const res  = await fetch(API_SUMMARY);
@@ -293,6 +215,7 @@ async function fetchSummary() {
 
     if (data.self && data.self.lat != null) {
       SELF = { lat: data.self.lat, lon: data.self.lon };
+      selfMarker.setLatLng([SELF.lat, SELF.lon]);
       redrawPeers();
     }
   } catch {}
@@ -318,6 +241,7 @@ async function fetchPeers() {
   } catch {}
 }
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
 function elapsed(unix) {
   const secs = Math.floor(Date.now() / 1000) - unix;
   if (secs < 60)   return `${secs}s`;
@@ -336,10 +260,14 @@ function setWsStatus(ok) {
   label.textContent = ok ? 'live' : 'reconnecting';
 }
 
+// ── Init ──────────────────────────────────────────────────────────────────────
 setInterval(fetchSummary, 10000);
 setInterval(renderPeerTable, 5000);
 
-loadMap();
 connect();
 
-// File: static/app.js / snap-coin-network / 2026-03-27
+// =============================================================================
+// File: static/app.js
+// Project: snap-coin-network / static/
+// Created: 2026-03-28T00:00:00Z
+// =============================================================================
